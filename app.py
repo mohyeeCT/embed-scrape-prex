@@ -13,7 +13,7 @@ import scipy.stats as stats
 import base64
 from io import BytesIO
 import requests
-from bs4 import BeautifulSoup # Import BeautifulSoup
+from bs4 import BeautifulSoup
 import streamlit as st
 import google.generativeai as genai
 from anthropic import Anthropic
@@ -29,8 +29,7 @@ from reportlab.lib import colors
 
 # Import the necessary module and class for programmatic rerun
 import streamlit.runtime.scriptrunner as rst
-from streamlit.runtime.scriptrunner import RerunData, RerunException # Import RerunData
-
+from streamlit.runtime.scriptrunner import RerunData, RerunException
 
 # Configure page - using only the basic parameters
 st.set_page_config(
@@ -233,8 +232,132 @@ To ensure consistent analysis across different content types:
 2. **Statistical Consistency**:
    - Always flag dimensions with magnitude >0.1 as significant
    - Consider clusters of 3+ adjacent dimensions with similar activations as coherent topics
-   - Identify semantic gaps as dimension ranges with consistently low activation ( tags
-    formatted_text = re.sub(r'^###?\s*(.+)$', r'\1', analysis_text, flags=re.MULTILINE)
+   - Identify semantic gaps as dimension ranges with consistently low activation (<0.01)
+   - Use standard deviation as a consistent measure of semantic density
+   - Always provide specific dimension numbers when referencing activation patterns
+
+3. **Analysis Structure**:
+   - Always analyze in exactly this order: coherence, topic identification, semantic density, gaps
+   - Use consistent scoring methodology (7/10 means the same thing across analyses)
+   - For each identified pattern, explain what it likely means for the specific content
+   - Include both strengths and weaknesses in every analysis section
+
+## CONTEXTUAL EXPLANATION
+Begin with a brief explanation of embedding dimensions and metrics for the user:
+
+**Embedding Dimensions Explained:**
+- Explain that embedding dimensions represent semantic features of content
+- Clarify that dimensions capture different aspects of meaning, topic relevance, and content quality
+- Note that strong activations (high positive or negative values) indicate important semantic features
+- Explain that clusters of activated dimensions often represent coherent topics or themes
+- Give concrete examples relating dimensions to content concepts (e.g., "Dimensions 1000-1100 often capture industry-specific terminology")
+
+**Metrics Interpretation Guide:**
+- Explain how mean values indicate overall semantic balance
+- Describe how standard deviation reflects semantic diversity
+- Clarify that top activation dimensions represent the most prominent content themes
+- Explain how dimension clusters relate to topic coherence
+- Note how dimensional patterns reflect content quality and optimization potential
+
+**Visualization Metrics Interpretation:**
+- **Embedding Overview Graph**: Explain that this shows the value of each dimension across the entire embedding, with spikes indicating important semantic features
+- **Top Dimensions Chart**: Clarify that these bars represent the most influential dimensions, with height indicating importance and color (blue/red) showing positive/negative orientation
+- **Activation Distribution Histogram**: Explain this shows the frequency of different activation values, with the bell curve shape indicating content balance
+- **Dimension Clusters Heatmap**: Describe how color intensity reveals semantic concentration areas, with bright spots indicating topical focus
+- **PCA Visualization**: Explain how this reduces complexity to show relationships between dimension groups, with proximity indicating semantic similarity
+
+## ANALYSIS STRUCTURE
+Your output must follow this structure precisely with FOUR distinct sections:
+
+1. **Contextual Explanation**
+   - Provide explanation of embedding dimensions and metrics
+   - Use accessible language while maintaining technical accuracy
+   - Connect abstract concepts to practical content implications
+
+2. **Embedding Analysis**
+   - Provide detailed technical analysis of the embedding patterns and their meanings
+   - Organize in clearly labeled sections
+   - Include quantitative metrics and specific dimension references
+
+2. **Actionable Recommendations**
+   - Provide specific, implementable suggestions tailored to the business type ({st.session_state.business_type}) and page type ({st.session_state.page_type})
+   - Separate completely from analysis
+   - Include examples of how to implement each recommendation
+   - Focus on recommendations that would be most effective for {business_context} and specifically for {page_context}
+
+3. **Summary**
+   - Summarize key findings and recommendations in non-technical language
+   - Format as bullet points
+   - Ensure it's understandable by someone with no technical background
+
+## BUSINESS-SPECIFIC CONSIDERATIONS
+
+For {business_context}:
+- Focus on the unique conversion factors and content priorities for this business model
+- Consider the typical customer journey and decision-making process
+- Align recommendations with business goals and revenue drivers
+
+For {page_context}:
+- Consider the specific purpose this page serves in the overall site architecture
+- Focus on recommendations that enhance the primary goal of this page type
+- Address the unique content needs and user intent for this specific page type""",
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"""Comprehensive Embedding Analysis Request:
+
+CONTENT CONTEXT:
+- First 4500 characters of content:
+{content_snippet[:4500]}
+
+EMBEDDING DATA DIAGNOSTICS:
+- Total Dimensions: {len(embedding_data)}
+- Dimensional Statistics:
+  * Mean Value: {np.mean(embedding_data):.6f}
+  * Standard Deviation: {np.std(embedding_data):.6f}
+  * Minimum Value: {np.min(embedding_data):.6f} (Dimension {np.argmin(embedding_data)})
+  * Maximum Value: {np.max(embedding_data):.6f} (Dimension {np.argmax(embedding_data)})
+
+TOP ACTIVATION DIMENSIONS:
+{sorted(range(len(embedding_data)), key=lambda i: abs(embedding_data[i]), reverse=True)[:10]}
+
+BUSINESS TYPE: {business_type}
+PAGE TYPE: {page_type}
+
+Please provide a comprehensive analysis following the exact format in your instructions:
+1. First, deliver a detailed EMBEDDING ANALYSIS with clear sections and quantitative metrics
+2. Then, provide completely separate ACTIONABLE RECOMMENDATIONS with implementation examples specifically tailored for this business type and page type
+3. Finally, include a PLAIN LANGUAGE SUMMARY in simple bullet points
+
+Ensure your analysis transforms embedding data into strategic, implementable content optimization insights."""
+                }
+            ]
+        )
+
+        # Extract text content from Claude's response
+        if hasattr(message.content, '__iter__') and not isinstance(message.content, str):
+            # If content is an iterable (like a list of content blocks)
+            extracted_text = ""
+            for block in message.content:
+                if hasattr(block, 'text'):
+                    extracted_text += block.text
+                elif isinstance(block, str):
+                    extracted_text += block
+            return extracted_text
+        elif hasattr(message.content, 'text'):
+            # If content is a single TextBlock object
+            return message.content.text
+        else:
+            # If content is already a string or something else
+            return str(message.content)
+
+    except Exception as e:
+        st.error(f"Error getting Claude analysis: {e}")
+        return "Error getting analysis from Claude. Please check your API key and try again."
+
+def format_claude_analysis(analysis_text):
+    # Convert markdown headings (##, ###) into <strong> tags
+    formatted_text = re.sub(r'^###?\s*(.+)$', r'<strong>\1</strong>', analysis_text, flags=re.MULTILINE)
     return formatted_text
 
 def plot_embedding_overview(embedding):
@@ -384,7 +507,10 @@ def analyze_embedding(embedding):
             "max_dimension": int(np.argmax(embedding)),
             "median_value": float(np.median(embedding)),
             "positive_count": int(np.sum(embedding > 0)),
-            "negative_count": int(np.sum(embedding  0.1))
+            "negative_count": int(np.sum(embedding < 0)),
+            "zero_count": int(np.sum(embedding == 0)),
+            "abs_mean": float(np.mean(abs_embedding)),
+            "significant_dims": int(np.sum(abs_embedding > 0.1))
         }
 
         # Find activation clusters
@@ -397,7 +523,10 @@ def analyze_embedding(embedding):
             current_cluster = [int(significant_dims[0])]  # Convert to int
 
             for i in range(1, len(significant_dims)):
-                if significant_dims[i] - significant_dims[i-1]  0:
+                if significant_dims[i] - significant_dims[i-1] <= 5:  # If dimensions are close
+                    current_cluster.append(int(significant_dims[i]))  # Convert to int
+                else:
+                    if len(current_cluster) > 0:
                         clusters.append(current_cluster)
                     current_cluster = [int(significant_dims[i])]  # Convert to int
 
@@ -665,7 +794,7 @@ def create_report_pdf(embedding, analysis, claude_analysis, business_type, page_
 
         # Process Claude analysis text - convert from HTML/markdown to plain text
         # Remove HTML tags
-        analysis_text = re.sub(r']*>', '', claude_analysis)
+        analysis_text = re.sub(r'<[^>]*>', '', claude_analysis)
 
         # Function to process headings better
         def process_heading(text, style):
@@ -676,7 +805,392 @@ def create_report_pdf(embedding, analysis, claude_analysis, business_type, page_
                 return Paragraph(text.replace('#', '').strip(), heading2_style)
             elif text.strip() and text.strip()[0].isupper():  # Likely a section title without # marks
                 first_line = text.split("\n")[0].strip()
-                if len(first_line) 0.1)")
+                if len(first_line) < 50 and first_line.isupper():  # It's probably a heading
+                    return Paragraph(first_line, heading2_style)
+            # Normal paragraph
+            return Paragraph(text, normal_style)
+
+        # Split by paragraphs and process each one
+        paragraphs = analysis_text.split('\n\n')
+
+        for paragraph in paragraphs:
+            if paragraph.strip():
+                element = process_heading(paragraph, normal_style)
+                story.append(element)
+                if isinstance(element, Paragraph) and element.style == heading1_style:
+                    story.append(Spacer(1, 12))  # More space after main headings
+
+        # Build the PDF
+        doc.build(story)
+
+        # Get the PDF value
+        pdf_value = buffer.getvalue()
+        buffer.close()
+
+        return pdf_value
+
+    except Exception as e:
+        st.error(f"Error generating PDF: {e}")
+        return None
+
+def fetch_content_from_url(url):
+    """Fetches and parses content from a given URL."""
+    try:
+        # Add headers to mimic a real browser request
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+        }
+        
+        # Make the request with headers and timeout
+        response = requests.get(url, headers=headers, timeout=15)
+        
+        # Log response details for debugging
+        st.write(f"Debug Info: Status Code: {response.status_code}")
+        st.write(f"Debug Info: Response Length: {len(response.content)} bytes")
+        
+        # Check for successful response
+        response.raise_for_status()
+        
+        # Parse the HTML
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # Remove script and style elements
+        for script in soup(["script", "style"]):
+            script.decompose()
+        
+        # Try multiple content extraction strategies
+        main_content = None
+        
+        # Strategy 1: Look for semantic HTML5 tags
+        main_content = soup.find('main') or soup.find('article')
+        
+        # Strategy 2: Look for common content containers
+        if not main_content:
+            main_content = soup.find('div', class_=lambda x: x and any(
+                keyword in x.lower() for keyword in ['content', 'main', 'article', 'post', 'entry']
+            ))
+        
+        # Strategy 3: Look for content by ID
+        if not main_content:
+            main_content = soup.find('div', id=lambda x: x and any(
+                keyword in x.lower() for keyword in ['content', 'main', 'article', 'post']
+            ))
+        
+        # Strategy 4: Fallback to body, but check if it exists
+        if not main_content and soup.body:
+            main_content = soup.body
+        
+        # Extract text if content is found
+        if main_content:
+            text = main_content.get_text(separator='\n', strip=True)
+        else:
+            st.warning("No main content found, extracting all visible text")
+            text = soup.get_text(separator='\n', strip=True)
+        
+        # Basic cleaning
+        text = re.sub(r'\n\s*\n', '\n\n', text)  # Reduce multiple newlines
+        text = re.sub(r'[ \t]+', ' ', text)  # Reduce multiple spaces/tabs
+        text = text.strip()
+        
+        # Check if we got meaningful content
+        if len(text) < 100:
+            st.warning(f"Warning: Only extracted {len(text)} characters. The page might be JavaScript-heavy or protected.")
+        
+        # Add metadata
+        title = soup.find('title')
+        description = soup.find('meta', attrs={'name': 'description'})
+        
+        extracted_info = ""
+        if title:
+            extracted_info += f"Title: {title.get_text(strip=True)}\n\n"
+        if description:
+            extracted_info += f"Description: {description.get('content', '').strip()}\n\n"
+        
+        extracted_info += "--- Page Content ---\n\n"
+        extracted_info += text
+        
+        return extracted_info
+        
+    except requests.exceptions.Timeout:
+        st.error("Request timed out. The website might be slow or unresponsive.")
+        return None
+    except requests.exceptions.ConnectionError:
+        st.error("Connection error. Check your internet connection or the URL.")
+        return None
+    except requests.exceptions.HTTPError as e:
+        st.error(f"HTTP Error {e.response.status_code}: {e.response.reason}")
+        if e.response.status_code == 403:
+            st.error("Access forbidden. The website might be blocking automated requests.")
+        elif e.response.status_code == 404:
+            st.error("Page not found. Please check the URL.")
+        return None
+    except requests.exceptions.RequestException as e:
+        st.error(f"Request error: {e}")
+        return None
+    except Exception as e:
+        st.error(f"Error parsing content: {e}")
+        return None
+
+# Main content area
+def main():
+    st.title("SEO Embedding Analysis Tool")
+
+    # Content input options
+    st.header("Content Input")
+
+    input_method = st.radio("Choose input method:", ("Paste Content", "Fetch from URL"), key="input_method_radio")
+
+    # Use a placeholder for content that reflects the current input method
+    content_placeholder = "Enter the content you want to analyze..." if input_method == "Paste Content" else "Content will be fetched from the URL..."
+
+    if input_method == "Paste Content":
+        # Text area for pasting content
+        # Value is read directly from session state on rerun
+        st.session_state.content = st.text_area("Paste your content here:", height=300,
+                              placeholder=content_placeholder,
+                              value=st.session_state.get('content', ''), key="pasted_content_area")
+        st.session_state.url = "" # Clear URL state when pasting content
+        # Button for analyzing pasted content
+        analyze_pasted_button = st.button("Analyze Pasted Content")
+        analyze_fetch_button = False # Ensure fetch button state doesn't interfere
+
+    else: # Fetch from URL
+        # Text input for URL
+        url = st.text_input("Enter the URL:", value=st.session_state.get('url', ''),
+                           placeholder="e.g., https://www.example.com/your-page")
+        # Update session state URL
+        st.session_state.url = url
+        # Clear pasted content state initially for URL mode on radio button change
+        # This is handled implicitly by the input_method check below
+
+        # Button to trigger fetch and then analysis
+        analyze_fetch_button = st.button("Fetch and Analyze URL")
+        analyze_pasted_button = False # Ensure paste button state doesn't interfere
+
+        # Logic to fetch content when the fetch button is clicked
+        if analyze_fetch_button and url:
+             with st.spinner(f"Fetching content from {url}..."):
+                fetched_content = fetch_content_from_url(url)
+                if fetched_content:
+                    st.session_state.content = fetched_content # Store fetched content
+                    st.success("Content fetched successfully! Running analysis...")
+                    st.session_state.fetch_button_clicked = True # Indicate successful fetch for the analysis trigger
+                else:
+                     st.error("Failed to fetch content. Please check the URL or try pasting.")
+                     st.session_state.content = "" # Clear content on failure
+                     st.session_state.url = "" # Clear URL on failure
+                     st.session_state.fetch_button_clicked = False # Reset state on failure if fetch fails
+             # Trigger a rerun after fetch attempt to update the UI and potentially start analysis
+             raise RerunException(RerunData()) # Use the correct rerun method with RerunData
+
+
+        elif analyze_fetch_button and not url:
+             st.warning("Please enter a URL.")
+             st.session_state.fetch_button_clicked = False # Reset state if button clicked with no URL
+
+
+    # --- Analysis Trigger Logic ---
+    # Determine if analysis should be triggered
+    # Trigger analysis if either the paste button is clicked and content is available,
+    # OR if the fetch button was clicked in the previous run and content is now successfully loaded in session state.
+    trigger_analysis = False
+
+    # Case 1: Paste Content and Analyze button clicked
+    if input_method == "Paste Content" and analyze_pasted_button and st.session_state.content:
+         trigger_analysis = True
+
+    # Case 2: Fetch from URL button clicked and fetch was successful (state updated in previous rerun)
+    # We check fetch_button_clicked which was set True in the previous rerun upon successful fetch
+    elif input_method == "Fetch from URL" and st.session_state.fetch_button_clicked and st.session_state.content:
+         trigger_analysis = True
+         # Reset the fetch_button_clicked state immediately after triggering analysis
+         st.session_state.fetch_button_clicked = False
+
+
+    # Display fetched content in a text area for review if available and in URL mode
+    # This text area also allows editing the fetched content before analysis if needed
+    if st.session_state.content and input_method == "Fetch from URL":
+         st.subheader("Fetched Content (Review)")
+         # Use a unique key for the text area in URL mode to maintain its state separately
+         st.session_state.content = st.text_area("Review and edit fetched content:", value=st.session_state.content, height=300, key="fetched_content_review_area")
+
+
+    # Add content categorization options - This section was missing in the code you provided
+    st.write("### Content Categorization")
+    st.write("Categorize your content to receive more tailored recommendations:")
+
+    # Create two columns for the dropdown menus
+    cat_col1, cat_col2 = st.columns(2)
+
+    with cat_col1:
+        business_type = st.selectbox(
+            "Business Type:",
+            options=["Lead Generation/Service", "E-commerce", "SaaS/Tech", "Educational/Informational", "Local Business"],
+            index=["Lead Generation/Service", "E-commerce", "SaaS/Tech", "Educational/Informational", "Local Business"].index(
+                "Lead Generation/Service" if st.session_state.business_type == "lead_generation" else
+                "E-commerce" if st.session_state.business_type == "ecommerce" else
+                "SaaS/Tech" if st.session_state.business_type == "saas" else
+                "Educational/Informational" if st.session_state.business_type == "educational" else
+                "Local Business"
+            ),
+            help="Select the business model that best matches your content",
+            key="business_type_selectbox" # Added a unique key
+        )
+
+        # Convert display values to internal values
+        st.session_state.business_type = (
+            "lead_generation" if business_type == "Lead Generation/Service" else
+            "ecommerce" if business_type == "E-commerce" else
+            "saas" if business_type == "SaaS/Tech" else
+            "educational" if business_type == "Educational/Informational" else
+            "local_business"
+        )
+
+    # Dynamically change page type options based on business type
+    with cat_col2:
+        if st.session_state.business_type == "lead_generation":
+            page_options = ["Landing Page", "Service Page", "Blog Post", "About Us", "Contact Page"]
+        elif st.session_state.business_type == "ecommerce":
+            page_options = ["Product Page", "Category Page", "Homepage", "Blog Post", "Checkout Page"]
+        elif st.session_state.business_type == "saas":
+            page_options = ["Feature Page", "Pricing Page", "Homepage", "Blog Post", "Documentation"]
+        elif st.session_state.business_type == "educational":
+            page_options = ["Course Page", "Resource Page", "Blog Post", "Homepage", "About Us"]
+        else:  # local_business
+            page_options = ["Homepage", "Service Page", "Location Page", "About Us", "Contact Page"]
+
+        # Get current page type and find its index in the new options, defaulting to 0 if not found
+        current_page_display = next((p for p in page_options if p.lower().replace(" ", "_") == st.session_state.page_type), page_options[0])
+        current_page_index = page_options.index(current_page_display) if current_page_display in page_options else 0
+
+        page_type = st.selectbox(
+            "Page Type:",
+            options=page_options,
+            index=current_page_index,
+            help="Select the type of page you're analyzing",
+            key="page_type_selectbox" # Added a unique key
+        )
+
+        # Convert display values to internal values
+        st.session_state.page_type = page_type.lower().replace(" ", "_")
+
+    # --- Analysis Execution ---
+    # This block runs if the trigger_analysis flag is True based on the conditions above
+    if trigger_analysis:
+
+        # Reset PDF data if a new analysis is starting
+        st.session_state.pdf_data = None
+        st.session_state.pdf_generated = False
+        st.session_state.claude_analysis = None # Clear previous analysis results
+
+        # Check if API keys are provided before proceeding with analysis
+        if not st.session_state.google_api_key or not st.session_state.anthropic_api_key:
+            st.error("Please provide both Google API and Anthropic API keys in the sidebar.")
+            # Reset analysis state if keys are missing to prevent displaying old results
+            st.session_state.embedding = None
+            st.session_state.analysis = None
+            st.session_state.claude_analysis = None
+            # No rerun needed here, the error message is sufficient to stop
+            return
+
+        with st.spinner("Analyzing content... This may take a minute."):
+
+            # Get embedding with progress indicator
+            progress_text = st.empty()
+            progress_text.text("Generating embedding from Google Gemini API...")
+            st.session_state.embedding = get_embedding(st.session_state.content)
+
+            # Generate analysis
+            progress_text.text("Analyzing embedding patterns...")
+            st.session_state.analysis = analyze_embedding(st.session_state.embedding)
+
+            # Get Claude analysis with business and page type context
+            progress_text.text("Getting comprehensive analysis from Claude...")
+            # Limit content sent to Claude to avoid token limits, while still providing context
+            claude_content_snippet = st.session_state.content[:4500]
+            st.session_state.claude_analysis = analyze_with_claude(
+                st.session_state.embedding,
+                claude_content_snippet,
+                st.session_state.business_type,
+                st.session_state.page_type
+            )
+            progress_text.empty()
+
+            # Display results only after successful analysis
+            if st.session_state.claude_analysis and "Error getting analysis" not in st.session_state.claude_analysis:
+                 st.success("Analysis complete!")
+                 # Trigger a rerun to display the results tabs
+                 raise RerunException(RerunData()) # Use the correct rerun method with RerunData
+            else:
+                 st.error("Analysis failed. Please check your API keys and try again.")
+
+
+    # Only display the results if we have a completed analysis in the session state
+    # Check for both embedding and claude_analysis to ensure analysis is complete and not an error message
+    if st.session_state.embedding is not None and st.session_state.claude_analysis is not None and "Error getting analysis" not in st.session_state.claude_analysis:
+        # Create tabs for different sections
+        tab1, tab2, tab3, tab4 = st.tabs(["Visualizations", "Metrics", "Clusters", "Analysis Report"])
+
+        # Tab 1: Visualizations
+        with tab1:
+            st.subheader("Embedding Overview")
+            fig1 = plot_embedding_overview(st.session_state.embedding)
+            st.pyplot(fig1)
+            plt.close(fig1)  # Release memory
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("Top Dimensions")
+                fig2 = plot_top_dimensions(st.session_state.embedding)
+                st.pyplot(fig2)
+                plt.close(fig2)  # Release memory
+
+            with col2:
+                st.subheader("Activation Distribution")
+                fig3 = plot_activation_histogram(st.session_state.embedding)
+                st.pyplot(fig3)
+                plt.close(fig3)  # Release memory
+
+            col3, col4 = st.columns(2)
+            with col3:
+                st.subheader("Dimension Clusters")
+                fig4 = plot_dimension_clusters(st.session_state.embedding)
+                st.pyplot(fig4)
+                plt.close(fig4)  # Release memory
+
+            with col4:
+                st.subheader("PCA Visualization")
+                fig5 = plot_pca(st.session_state.embedding)
+                st.pyplot(fig5)
+                plt.close(fig5)  # Release memory
+
+        # Tab 2: Metrics
+        with tab2:
+            st.subheader("Key Metrics")
+            metrics = st.session_state.analysis["metrics"]
+
+            # Create a 3-column layout for metrics
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric("Dimensions", metrics["dimension_count"])
+                st.metric("Mean Value", f"{metrics['mean_value']:.6f}")
+                st.metric("Standard Deviation", f"{metrics['std_dev']:.6f}")
+
+            with col2:
+                st.metric("Min Value", f"{metrics['min_value']:.6f} (dim {metrics['min_dimension']})")
+                st.metric("Max Value", f"{metrics['max_value']:.6f} (dim {metrics['max_dimension']})")
+                st.metric("Median Value", f"{metrics['median_value']:.6f}")
+
+            with col3:
+                st.metric("Positive Values", f"{metrics['positive_count']} ({metrics['positive_count']/metrics['dimension_count']*100:.2f}%)")
+                st.metric("Negative Values", f"{metrics['negative_count']} ({metrics['negative_count']/metrics['dimension_count']*100:.2f}%)")
+                st.metric("Significant Dimensions", f"{metrics['significant_dims']} (>0.1)")
 
         # Tab 3: Clusters
         with tab3:
@@ -706,11 +1220,11 @@ def create_report_pdf(embedding, analysis, claude_analysis, business_type, page_
             page_display = st.session_state.page_type.replace("_", " ").title()
 
             st.markdown(f"""
-            
-                Analysis tailored for:
-                Business Type: {business_display}
-                Page Type: {page_display}
-            
+            <div style="background-color: #f0f8ff; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
+                <p style="margin: 0; font-weight: bold;">Analysis tailored for:</p>
+                <p style="margin: 0;"><strong>Business Type:</strong> {business_display}</p>
+                <p style="margin: 0;"><strong>Page Type:</strong> {page_display}</p>
+            </div>
             """, unsafe_allow_html=True)
 
             st.subheader("Comprehensive Embedding Analysis Report")
@@ -723,9 +1237,9 @@ def create_report_pdf(embedding, analysis, claude_analysis, business_type, page_
 
             with st.container():
                 st.markdown("""
-                
-                Download Options
-                
+                <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px;">
+                <h3 style="margin-top: 0;">Download Options</h3>
+                </div>
                 """, unsafe_allow_html=True)
 
                 col1, col2 = st.columns(2)
@@ -764,7 +1278,7 @@ def create_report_pdf(embedding, analysis, claude_analysis, business_type, page_
                     else:
                          # Show PDF download button if PDF has been generated
                          b64_pdf = base64.b64encode(st.session_state.pdf_data).decode('utf-8')
-                         download_link = f'DOWNLOAD COMPLETE PDF REPORT'
+                         download_link = f'<a href="data:application/pdf;base64,{b64_pdf}" download="seo_embedding_analysis_report.pdf" class="button" style="display: inline-block; padding: 12px 20px; background-color: #0c6b58; color: white; text-decoration: none; font-weight: bold; border-radius: 4px; text-align: center; margin: 10px 0; width: 100%;">DOWNLOAD COMPLETE PDF REPORT</a>'
                          st.markdown(download_link, unsafe_allow_html=True)
 
                          if st.button("Discard PDF and Generate Again", key="discard_pdf_button_tab"):
@@ -781,6 +1295,3 @@ if __name__ == "__main__":
         # Add a basic content area to ensure something is visible
         st.write("## SEO Embedding Analysis Tool")
         st.write("This tool analyzes content semantics using embeddings.")
-
-[1] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/54161586/5420b228-c181-4707-922a-9035d23eb1eb/paste.txt
-[2] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/54161586/9ed21957-daa3-4d22-bbba-cf6901767961/paste.txt
