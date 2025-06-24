@@ -1,13 +1,3 @@
-Looking at your code, I can see the issue with the `fetch_content_from_url` function. The main problems are:
-
-1. **Missing User-Agent header** - websites often block requests without proper headers
-2. **Insufficient error handling** for different HTTP status codes
-3. **No validation** that `soup.body` exists before calling `.get_text()`
-4. **Limited content extraction strategies**
-
-Here's the complete code with the fixed `fetch_content_from_url` function:
-
-```python
 import os
 import json
 import numpy as np
