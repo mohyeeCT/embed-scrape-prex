@@ -1502,7 +1502,7 @@ def main():
             if st.session_state.claude_analysis and "Error getting analysis" not in st.session_state.claude_analysis:
                  st.success("Analysis complete with keyword targeting insights!")
                  # Trigger a rerun to display the results tabs
-                 raise RerunException(RerunData()) # Use the correct rerun method with RerunData
+                 raise RerunException(RerunData())
             else:
                  st.error("Analysis failed. Please check your API keys and try again.")
 
@@ -1602,7 +1602,7 @@ def main():
                             break
                         elif keyword_section_start and line.startswith("KEYWORD:"):
                             current_keyword = line.replace("KEYWORD:", "").strip()
-                            with st.expander(f"Analysis: {current_keyword}", expanded=False):
+                            with st.expander(f"Analysis for: {current_keyword}", expanded=False):
                                 # Extract keyword data from the following lines
                                 # This is a simplified version - you might want to enhance this
                                 st.write("**Keyword Analysis:**")
