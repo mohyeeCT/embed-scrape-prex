@@ -1096,7 +1096,7 @@ def main():
     st.title("SEO Embedding Analysis Tool")
     
     # Add this debug/clear button
-    if st.button("🗑️ Clear All Data", help="Clear previous analysis and start fresh"):
+    if st.button("Clear All Data", help="Clear previous analysis and start fresh"):
         for key in ['embedding', 'analysis', 'claude_analysis', 'analysis_completed', 'seo_metadata', 'heading_structure']:
             if key in st.session_state:
                 st.session_state[key] = None
@@ -1277,7 +1277,7 @@ def main():
     if target_keyword:
         st.markdown(f"""
         <div style="background-color: #e8f4fd; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #1f77b4;">
-            <strong>📊 Analysis Configuration:</strong><br>
+            <strong>Analysis Configuration:</strong><br>
             <strong>Business:</strong> {business_type} | <strong>Page:</strong> {page_type} | <strong>Keywords:</strong> {target_keyword}
         </div>
         """, unsafe_allow_html=True)
