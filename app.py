@@ -1493,7 +1493,7 @@ st.markdown(st.session_state.claude_analysis, unsafe_allow_html=True)
             # Download options
 st.write("---")
 
-            with st.container():
+with st.container():
                 st.markdown("""
                 <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px;">
                 <h3 style="margin-top: 0;">Download Options</h3>
