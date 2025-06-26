@@ -1174,7 +1174,7 @@ def main():
 
 
     # Add content categorization options - This section was missing in the code you provided
-st.write("### Content Categorization & Target Keywords")
+    st.write("### Content Categorization & Target Keywords")
     st.write("Categorize your content and specify target keywords to receive more tailored SEO recommendations:")
 
     # Create three columns for the inputs
