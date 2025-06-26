@@ -44,7 +44,6 @@ try:
     if 'anthropic_api_key' not in st.session_state:
         st.session_state.anthropic_api_key = st.secrets.get("ANTHROPIC_API_KEY", "")
 except Exception as e:
-    # If secrets are not available (local development), initialize with empty strings
     if 'google_api_key' not in st.session_state:
         st.session_state.google_api_key = ""
     if 'anthropic_api_key' not in st.session_state:
@@ -84,6 +83,9 @@ if 'seo_metadata' not in st.session_state:
     st.session_state.seo_metadata = None
 if 'heading_structure' not in st.session_state:
     st.session_state.heading_structure = None
+if 'analysis_completed' not in st.session_state:
+    st.session_state.analysis_completed = False
+
 # Sidebar for API keys and settings
 with st.sidebar:
     st.title("API Settings")
@@ -1098,6 +1100,15 @@ def main():
 
     input_method = st.radio("Choose input method:", ("Paste Content", "Fetch from URL"), key="input_method_radio")
 
+    # Reset analysis state when switching input methods
+    if 'previous_input_method' not in st.session_state:
+        st.session_state.previous_input_method = input_method
+    elif st.session_state.previous_input_method != input_method:
+        st.session_state.analysis_completed = False
+        st.session_state.embedding = None
+        st.session_state.claude_analysis = None
+        st.session_state.previous_input_method = input_method
+
     # Use a placeholder for content that reflects the current input method
     content_placeholder = "Enter the content you want to analyze..." if input_method == "Paste Content" else "Content will be fetched from the URL..."
 
@@ -1270,7 +1281,8 @@ def main():
         # Reset PDF data if a new analysis is starting
         st.session_state.pdf_data = None
         st.session_state.pdf_generated = False
-        st.session_state.claude_analysis = None # Clear previous analysis results
+        st.session_state.claude_analysis = None
+        st.session_state.analysis_completed = False  # ADD THIS LINE
 
         # Check if API keys are provided before proceeding with analysis
         if not st.session_state.google_api_key or not st.session_state.anthropic_api_key:
@@ -1308,16 +1320,19 @@ def main():
 
             # Display results only after successful analysis
             if st.session_state.claude_analysis and "Error getting analysis" not in st.session_state.claude_analysis:
-                 st.success("Analysis complete!")
-                 # Trigger a rerun to display the results tabs
-                 raise RerunException(RerunData()) # Use the correct rerun method with RerunData
+                st.session_state.analysis_completed = True  # ADD THIS LINE
+                st.success("Analysis complete!")
+                # Trigger a rerun to display the results tabs
+                raise RerunException(RerunData())
             else:
-                 st.error("Analysis failed. Please check your API keys and try again.")
-
+                st.error("Analysis failed. Please check your API keys and try again.")
 
     # Only display the results if we have a completed analysis in the session state
     # Check for both embedding and claude_analysis to ensure analysis is complete and not an error message
-    if st.session_state.embedding is not None and st.session_state.claude_analysis is not None and "Error getting analysis" not in st.session_state.claude_analysis:
+    if (st.session_state.analysis_completed and 
+        st.session_state.embedding is not None and 
+        st.session_state.claude_analysis is not None and 
+        "Error getting analysis" not in st.session_state.claude_analysis):
         # Create tabs for different sections
         tab1, tab2, tab3, tab4, tab5 = st.tabs(["SEO Metadata", "Visualizations", "Metrics", "Clusters", "Analysis Report"])
 
