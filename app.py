@@ -1261,77 +1261,78 @@ def main():
     if st.session_state.embedding is not None and st.session_state.claude_analysis is not None and "Error getting analysis" not in st.session_state.claude_analysis:
         # Create tabs for different sections
         tab1, tab2, tab3, tab4, tab5 = st.tabs(["SEO Metadata", "Visualizations", "Metrics", "Clusters", "Analysis Report"])
-# Tab 1: SEO Metadata
-    with tab1:
-        if hasattr(st.session_state, 'seo_metadata') and st.session_state.seo_metadata:
-            st.subheader("SEO Metadata Analysis")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.write("**Title Tag:**")
-                title_length = len(st.session_state.seo_metadata['title'])
-                title_color = "🟢" if 30 <= title_length <= 60 else "🟡" if title_length <= 70 else "🔴"
-                st.info(f"{title_color} {st.session_state.seo_metadata['title']} ({title_length} chars)")
+
+        # Tab 1: SEO Metadata
+        with tab1:
+            if hasattr(st.session_state, 'seo_metadata') and st.session_state.seo_metadata:
+                st.subheader("SEO Metadata Analysis")
                 
-                st.write("**Meta Description:**")
-                desc_length = len(st.session_state.seo_metadata['meta_description'])
-                desc_color = "🟢" if 120 <= desc_length <= 160 else "🟡" if desc_length <= 180 else "🔴"
-                st.info(f"{desc_color} {st.session_state.seo_metadata['meta_description']} ({desc_length} chars)")
-                
-                st.write("**Meta Keywords:**")
-                st.info(st.session_state.seo_metadata['meta_keywords'])
-            
-            with col2:
-                st.write("**Canonical URL:**")
-                st.info(st.session_state.seo_metadata['canonical_url'])
-                
-                st.write("**OG Title:**")
-                st.info(st.session_state.seo_metadata['og_title'])
-                
-                st.write("**OG Description:**")
-                st.info(st.session_state.seo_metadata['og_description'])
-            
-            # Heading structure
-            st.subheader("Heading Structure")
-            if hasattr(st.session_state, 'heading_structure'):
-                headings = st.session_state.heading_structure
-                
-                h1_count = len(headings.get('h1', []))
-                h1_color = "🟢" if h1_count == 1 else "🟡" if h1_count == 0 else "🔴"
-                
-                col1, col2, col3 = st.columns(3)
+                col1, col2 = st.columns(2)
                 
                 with col1:
-                    st.write(f"**H1 Tags ({h1_color} {h1_count}):**")
-                    if headings.get('h1'):
-                        for i, heading in enumerate(headings['h1'], 1):
-                            st.write(f"{i}. {heading}")
-                    else:
-                        st.write("❌ No H1 tags found")
+                    st.write("**Title Tag:**")
+                    title_length = len(st.session_state.seo_metadata['title'])
+                    title_color = "🟢" if 30 <= title_length <= 60 else "🟡" if title_length <= 70 else "🔴"
+                    st.info(f"{title_color} {st.session_state.seo_metadata['title']} ({title_length} chars)")
+                    
+                    st.write("**Meta Description:**")
+                    desc_length = len(st.session_state.seo_metadata['meta_description'])
+                    desc_color = "🟢" if 120 <= desc_length <= 160 else "🟡" if desc_length <= 180 else "🔴"
+                    st.info(f"{desc_color} {st.session_state.seo_metadata['meta_description']} ({desc_length} chars)")
+                    
+                    st.write("**Meta Keywords:**")
+                    st.info(st.session_state.seo_metadata['meta_keywords'])
                 
                 with col2:
-                    st.write(f"**H2 Tags ({len(headings.get('h2', []))}):**")
-                    if headings.get('h2'):
-                        for i, heading in enumerate(headings['h2'][:5], 1):
-                            st.write(f"{i}. {heading}")
-                        if len(headings['h2']) > 5:
-                            st.write(f"... and {len(headings['h2']) - 5} more")
-                    else:
-                        st.write("No H2 tags found")
+                    st.write("**Canonical URL:**")
+                    st.info(st.session_state.seo_metadata['canonical_url'])
+                    
+                    st.write("**OG Title:**")
+                    st.info(st.session_state.seo_metadata['og_title'])
+                    
+                    st.write("**OG Description:**")
+                    st.info(st.session_state.seo_metadata['og_description'])
                 
-                with col3:
-                    st.write(f"**H3 Tags ({len(headings.get('h3', []))}):**")
-                    if headings.get('h3'):
-                        for i, heading in enumerate(headings['h3'][:5], 1):
-                            st.write(f"{i}. {heading}")
-                        if len(headings['h3']) > 5:
-                            st.write(f"... and {len(headings['h3']) - 5} more")
-                    else:
-                        st.write("No H3 tags found")
-        else:
-            st.info("SEO metadata will appear here when you analyze a URL. For pasted content, this tab won't show data.")
-            
+                # Heading structure
+                st.subheader("Heading Structure")
+                if hasattr(st.session_state, 'heading_structure'):
+                    headings = st.session_state.heading_structure
+                    
+                    h1_count = len(headings.get('h1', []))
+                    h1_color = "🟢" if h1_count == 1 else "🟡" if h1_count == 0 else "🔴"
+                    
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.write(f"**H1 Tags ({h1_color} {h1_count}):**")
+                        if headings.get('h1'):
+                            for i, heading in enumerate(headings['h1'], 1):
+                                st.write(f"{i}. {heading}")
+                        else:
+                            st.write("❌ No H1 tags found")
+                    
+                    with col2:
+                        st.write(f"**H2 Tags ({len(headings.get('h2', []))}):**")
+                        if headings.get('h2'):
+                            for i, heading in enumerate(headings['h2'][:5], 1):
+                                st.write(f"{i}. {heading}")
+                            if len(headings['h2']) > 5:
+                                st.write(f"... and {len(headings['h2']) - 5} more")
+                        else:
+                            st.write("No H2 tags found")
+                    
+                    with col3:
+                        st.write(f"**H3 Tags ({len(headings.get('h3', []))}):**")
+                        if headings.get('h3'):
+                            for i, heading in enumerate(headings['h3'][:5], 1):
+                                st.write(f"{i}. {heading}")
+                            if len(headings['h3']) > 5:
+                                st.write(f"... and {len(headings['h3']) - 5} more")
+                        else:
+                            st.write("No H3 tags found")
+            else:
+                st.info("SEO metadata will appear here when you analyze a URL. For pasted content, this tab won't show data.")
+
         # Tab 2: Visualizations
         with tab2:
             st.subheader("Embedding Overview")
@@ -1468,7 +1469,7 @@ def main():
                                     st.session_state.pdf_generated = True
                                     st.success("PDF report generated successfully!")
                                     # Trigger a rerun to show the download button immediately
-                                    raise RerunException(RerunData()) # Use the correct rerun method with RerunData
+                                    raise RerunException(RerunData())
                                 except Exception as e:
                                     st.error(f"Error generating PDF: {str(e)}")
                     else:
@@ -1481,7 +1482,7 @@ def main():
                             st.session_state.pdf_data = None
                             st.session_state.pdf_generated = False
                             # Trigger a rerun to update the button state
-                            raise RerunException(RerunData()) # Use the correct rerun method with RerunData
+                            raise RerunException(RerunData())
 
 if __name__ == "__main__":
     try:
