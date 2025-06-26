@@ -78,6 +78,8 @@ if 'url' not in st.session_state:
     st.session_state.url = ""
 if 'fetch_button_clicked' not in st.session_state:
     st.session_state.fetch_button_clicked = False
+if 'target_keyword' not in st.session_state:
+    st.session_state.target_keyword = ""
 if 'seo_metadata' not in st.session_state:
     st.session_state.seo_metadata = None
 if 'heading_structure' not in st.session_state:
@@ -159,8 +161,8 @@ def get_current_settings():
         "thinking_tokens": st.session_state.thinking_tokens
     }
 
-def analyze_with_claude(embedding_data, content_snippet, business_type, page_type):
-    """Get analysis from Claude with business, page type context, and SEO metadata"""
+def analyze_with_claude(embedding_data, content_snippet, business_type, page_type, target_keywords=""):
+    """Get analysis from Claude with business, page type context, SEO metadata, and keyword targeting"""
     try:
         # Get current settings at the time of function call
         current_settings = get_current_settings()
@@ -208,6 +210,18 @@ def analyze_with_claude(embedding_data, content_snippet, business_type, page_typ
         else:
             page_context = f"a {page_type.replace('_', ' ')}"
 
+        # Process target keywords
+        keyword_context = ""
+        if target_keywords and target_keywords.strip():
+            keywords_list = [kw.strip() for kw in target_keywords.split(',') if kw.strip()]
+            if keywords_list:
+                if len(keywords_list) == 1:
+                    keyword_context = f"The PRIMARY TARGET KEYWORD for this content is: '{keywords_list[0]}'"
+                else:
+                    primary_keyword = keywords_list[0]
+                    secondary_keywords = keywords_list[1:]
+                    keyword_context = f"The PRIMARY TARGET KEYWORD is: '{primary_keyword}'\nSECONDARY TARGET KEYWORDS are: {', '.join([f\"'{kw}'\" for kw in secondary_keywords])}"
+
         # Extract SEO metadata if available
         seo_info = ""
         if hasattr(st.session_state, 'seo_metadata') and st.session_state.seo_metadata:
@@ -237,18 +251,27 @@ HEADING STRUCTURE:
                 "type": "enabled",
                 "budget_tokens": current_settings["thinking_tokens"]
             },
-            system=f"""You are an advanced SEO and NLP Embedding Analysis Expert with deep expertise in semantic content optimization, machine learning-driven content strategy, and advanced natural language processing techniques.
+            system=f"""You are an advanced SEO and NLP Embedding Analysis Expert with deep expertise in semantic content optimization, machine learning-driven content strategy, keyword targeting, and advanced natural language processing techniques.
 
-Your mission is to provide a comprehensive, multi-dimensional analysis of embedding data that transforms raw numerical information into actionable SEO and content strategy insights.
+Your mission is to provide a comprehensive, multi-dimensional analysis of embedding data that transforms raw numerical information into actionable SEO and content strategy insights with specific focus on keyword optimization.
 
 IMPORTANT CONTEXT: The content being analyzed is for {business_context}. Specifically, it is {page_context}. Tailor all your analysis and recommendations to this specific business and page type.
 
-## SEO METADATA INTEGRATION
+## KEYWORD TARGETING INTEGRATION
+When target keywords are provided, you must analyze:
+1. **Keyword Semantic Representation**: How well the target keywords are represented in the embedding dimensions
+2. **Keyword Density & Placement**: Evaluate keyword usage in title, headings, and content
+3. **Semantic Keyword Variants**: Identify related terms and LSI keywords present in the content
+4. **Keyword Intent Alignment**: Assess whether content matches the search intent of target keywords
+5. **Keyword Competition Gaps**: Identify opportunities to better target the keywords
+6. **Long-tail Opportunities**: Suggest related long-tail keyword opportunities based on embedding patterns
+
+## SEO METADATA & KEYWORD INTEGRATION
 When SEO metadata is provided, you must analyze:
-1. **Title Tag Optimization**: Length, keyword placement, clarity, and brand alignment
-2. **Meta Description Quality**: Length (150-160 chars), compelling copy, call-to-action presence
-3. **Heading Hierarchy**: Proper H1 usage (should be one primary H1), logical H2/H3 structure
-4. **Content-Metadata Alignment**: How well the embedding patterns match the SEO metadata promises
+1. **Title Tag Optimization**: Length, keyword placement, clarity, and brand alignment with target keywords
+2. **Meta Description Quality**: Length (150-160 chars), compelling copy, call-to-action presence, keyword inclusion
+3. **Heading Hierarchy**: Proper H1 usage with target keywords, logical H2/H3 structure with related terms
+4. **Content-Metadata-Keyword Alignment**: How well the embedding patterns match both SEO metadata promises and keyword targets
 5. **Missing SEO Elements**: Identify gaps in meta keywords, canonical URLs, Open Graph data
 
 ## ANALYTICAL METHODOLOGY
@@ -257,85 +280,89 @@ To ensure consistent analysis across different content types:
 1. **Dimension Analysis Method**:
    - First identify the top 20 dimensions by absolute activation magnitude
    - Cluster these dimensions into 3-7 related groups based on activation patterns
-   - Interpret what each cluster likely represents based on the specific content being analyzed
+   - Interpret what each cluster likely represents based on the specific content AND target keywords
+   - Correlate high-activation dimensions with target keyword semantic fields
    - Never assign predetermined meanings to specific dimension ranges
    - Base all interpretations only on patterns present in the current embedding
 
-2. **SEO-Embedding Correlation Analysis**:
-   - Correlate high-activation semantic dimensions with SEO metadata keywords
-   - Identify semantic gaps between stated page purpose (title/meta) and content embedding
-   - Analyze heading structure coherence with content themes in embedding
-   - Flag inconsistencies between SEO promises and semantic content delivery
+2. **Keyword-Embedding Correlation Analysis**:
+   - Identify which dimensions likely represent target keyword concepts
+   - Assess semantic gaps between target keywords and content representation
+   - Evaluate keyword synonym and variant coverage in embedding patterns
+   - Flag opportunities to strengthen keyword relevance signals
 
-3. **Statistical Consistency**:
-   - Always flag dimensions with magnitude >0.1 as significant
-   - Consider clusters of 3+ adjacent dimensions with similar activations as coherent topics
-   - Identify semantic gaps as dimension ranges with consistently low activation (<0.01)
-   - Use standard deviation as a consistent measure of semantic density
-   - Always provide specific dimension numbers when referencing activation patterns
+3. **SEO-Keyword-Content Triangulation**:
+   - Correlate high-activation semantic dimensions with both SEO metadata AND target keywords
+   - Identify conflicts between stated page purpose (title/meta), target keywords, and content embedding
+   - Analyze heading structure coherence with keyword targeting strategy
+   - Flag inconsistencies between SEO promises, keyword targets, and semantic content delivery
 
 ## CONTEXTUAL EXPLANATION
-Begin with a brief explanation of embedding dimensions and metrics for the user:
+Begin with a brief explanation of embedding dimensions, metrics, and keyword targeting for the user:
 
 **Embedding Dimensions Explained:**
 - Explain that embedding dimensions represent semantic features of content
-- Clarify that dimensions capture different aspects of meaning, topic relevance, and content quality
-- Note that strong activations (high positive or negative values) indicate important semantic features
-- Explain that clusters of activated dimensions often represent coherent topics or themes
-- Give concrete examples relating dimensions to content concepts
+- Clarify how dimensions capture keyword relevance, topic coherence, and search intent signals
+- Note that strong activations in keyword-related dimensions indicate good optimization
+- Explain how clusters of activated dimensions represent topic themes and keyword coverage
 
-**SEO Metadata Integration:**
-- Explain how SEO metadata (title, description, headings) should align with embedding patterns
-- Describe how misalignment indicates optimization opportunities
-- Note how heading structure should reflect in dimensional clustering patterns
+**Keyword Targeting & SEO Integration:**
+- Explain how target keywords should be represented across multiple embedding dimensions
+- Describe how SEO metadata (title, description, headings) should align with both embedding patterns AND keyword targets
+- Note how misalignment indicates specific optimization opportunities
 
 ## ANALYSIS STRUCTURE
 Your output must follow this structure precisely with FOUR distinct sections:
 
 1. **Contextual Explanation**
-   - Provide explanation of embedding dimensions, metrics, and SEO metadata integration
+   - Provide explanation of embedding dimensions, metrics, SEO metadata, and keyword targeting integration
    - Use accessible language while maintaining technical accuracy
-   - Connect abstract concepts to practical content implications
+   - Connect abstract concepts to practical content and SEO implications
 
 2. **Embedding Analysis**
    - Provide detailed technical analysis of the embedding patterns and their meanings
-   - **SEO Metadata Analysis**: Dedicated subsection analyzing title, meta description, headings, and their alignment with content
-   - **Content-SEO Alignment**: How well the semantic content matches SEO promises
-   - Organize in clearly labeled sections
-   - Include quantitative metrics and specific dimension references
+   - **Keyword Targeting Analysis**: Dedicated subsection analyzing how well target keywords are represented in the embedding
+   - **SEO Metadata Analysis**: How title, meta description, headings align with keywords and content
+   - **Content-SEO-Keyword Alignment**: Comprehensive assessment of how well all three elements work together
+   - **Semantic Keyword Coverage**: Analysis of related terms, synonyms, and LSI keyword presence
+   - Organize in clearly labeled sections with quantitative metrics and specific dimension references
 
 3. **Actionable Recommendations**
-   - Provide specific, implementable suggestions tailored to the business type and page type
-   - **SEO-Specific Recommendations**: Title optimization, meta description improvements, heading restructuring
-   - **Content-SEO Alignment Fixes**: How to better align content with SEO metadata
+   - Provide specific, implementable suggestions tailored to the business type, page type, AND keyword targets
+   - **Keyword Optimization Recommendations**: Specific ways to better target the keywords through content improvements
+   - **SEO-Keyword Integration**: How to optimize title, meta description, and headings for target keywords
+   - **Content Enhancement for Keywords**: Specific content additions or modifications to improve keyword relevance
+   - **Long-tail Keyword Opportunities**: Suggest related keywords to target based on embedding analysis
    - Include examples of how to implement each recommendation
-   - Focus on recommendations that would be most effective for this business and page type
+   - Focus on recommendations that would be most effective for this business, page type, and keyword strategy
 
 4. **Summary**
    - Summarize key findings and recommendations in non-technical language
-   - Include both content and SEO optimization priorities
-   - Format as bullet points
+   - Include keyword optimization priorities alongside content and technical SEO recommendations
+   - Format as bullet points prioritized by potential impact
    - Ensure it's understandable by someone with no technical background
 
 ## BUSINESS-SPECIFIC CONSIDERATIONS
 
 For {business_context}:
-- Focus on the unique conversion factors and content priorities for this business model
-- Consider the typical customer journey and decision-making process
-- Align recommendations with business goals and revenue drivers
+- Focus on keyword strategies that align with this business model's conversion goals
+- Consider how target keywords fit into the typical customer journey for this business type
+- Align keyword recommendations with business goals and revenue drivers
 
 For {page_context}:
-- Consider the specific purpose this page serves in the overall site architecture
-- Focus on recommendations that enhance the primary goal of this page type
-- Address the unique content needs and user intent for this specific page type""",
+- Consider how target keywords should be optimized for this specific page type
+- Focus on keyword placement and optimization strategies that enhance the primary goal of this page type
+- Address keyword intent alignment with the specific user needs for this page type""",
             messages=[
                 {
                     "role": "user",
-                    "content": f"""Comprehensive Embedding Analysis Request with SEO Metadata:
+                    "content": f"""Comprehensive Embedding Analysis Request with SEO Metadata and Keyword Targeting:
 
 CONTENT CONTEXT:
 - First 4500 characters of content:
 {content_snippet[:4500]}
+
+{keyword_context}
 
 {seo_info}
 
@@ -354,11 +381,11 @@ BUSINESS TYPE: {business_type}
 PAGE TYPE: {page_type}
 
 Please provide a comprehensive analysis following the exact format in your instructions:
-1. First, deliver a detailed EMBEDDING ANALYSIS with clear sections including SEO metadata analysis and content-SEO alignment
-2. Then, provide completely separate ACTIONABLE RECOMMENDATIONS with implementation examples specifically tailored for this business type and page type, including SEO-specific recommendations
-3. Finally, include a PLAIN LANGUAGE SUMMARY in simple bullet points covering both content and SEO priorities
+1. First, deliver a detailed EMBEDDING ANALYSIS with clear sections including keyword targeting analysis, SEO metadata analysis, and content-SEO-keyword alignment
+2. Then, provide completely separate ACTIONABLE RECOMMENDATIONS with implementation examples specifically tailored for this business type, page type, and keyword targets
+3. Finally, include a PLAIN LANGUAGE SUMMARY in simple bullet points covering content, SEO, and keyword optimization priorities
 
-Ensure your analysis transforms embedding data into strategic, implementable content and SEO optimization insights."""
+Ensure your analysis transforms embedding data into strategic, implementable content, SEO, and keyword optimization insights."""
                 }
             ]
         )
@@ -1147,11 +1174,11 @@ def main():
 
 
     # Add content categorization options - This section was missing in the code you provided
-    st.write("### Content Categorization")
-    st.write("Categorize your content to receive more tailored recommendations:")
+st.write("### Content Categorization & Target Keywords")
+    st.write("Categorize your content and specify target keywords to receive more tailored SEO recommendations:")
 
-    # Create two columns for the dropdown menus
-    cat_col1, cat_col2 = st.columns(2)
+    # Create three columns for the inputs
+    cat_col1, cat_col2, cat_col3 = st.columns([1, 1, 1.2])
 
     with cat_col1:
         business_type = st.selectbox(
@@ -1165,7 +1192,7 @@ def main():
                 "Local Business"
             ),
             help="Select the business model that best matches your content",
-            key="business_type_selectbox" # Added a unique key
+            key="business_type_selectbox"
         )
 
         # Convert display values to internal values
@@ -1199,11 +1226,42 @@ def main():
             options=page_options,
             index=current_page_index,
             help="Select the type of page you're analyzing",
-            key="page_type_selectbox" # Added a unique key
+            key="page_type_selectbox"
         )
 
         # Convert display values to internal values
         st.session_state.page_type = page_type.lower().replace(" ", "_")
+
+    with cat_col3:
+        target_keyword = st.text_input(
+            "Target Keywords:",
+            value=st.session_state.target_keyword,
+            placeholder="e.g., best CRM software, plumbing services NYC",
+            help="Enter your primary target keyword(s) for this page. Use commas to separate multiple keywords.",
+            key="target_keyword_input"
+        )
+        
+        # Update session state
+        st.session_state.target_keyword = target_keyword
+        
+        # Show keyword tips
+        if target_keyword:
+            keywords_list = [kw.strip() for kw in target_keyword.split(',') if kw.strip()]
+            if len(keywords_list) > 1:
+                st.caption(f"✅ Analyzing {len(keywords_list)} target keywords")
+            else:
+                st.caption(f"✅ Primary keyword: '{keywords_list[0]}'")
+        else:
+            st.caption("💡 Add keywords for better SEO analysis")
+
+    # Show a summary box with all selections
+    if target_keyword:
+        st.markdown(f"""
+        <div style="background-color: #e8f4fd; padding: 12px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #1f77b4;">
+            <strong>📊 Analysis Configuration:</strong><br>
+            <strong>Business:</strong> {business_type} | <strong>Page:</strong> {page_type} | <strong>Keywords:</strong> {target_keyword}
+        </div>
+        """, unsafe_allow_html=True)
 
     # --- Analysis Execution ---
     # This block runs if the trigger_analysis flag is True based on the conditions above
@@ -1243,7 +1301,8 @@ def main():
                 st.session_state.embedding,
                 claude_content_snippet,
                 st.session_state.business_type,
-                st.session_state.page_type
+                st.session_state.page_type,
+                st.session_state.target_keyword
             )
             progress_text.empty()
 
@@ -1415,12 +1474,14 @@ def main():
             }.get(st.session_state.business_type, st.session_state.business_type.replace("_", " ").title())
 
             page_display = st.session_state.page_type.replace("_", " ").title()
-
+# Show analysis configuration including keywords
+keywords_display = st.session_state.target_keyword if st.session_state.target_keyword else "No target keywords specified"
             st.markdown(f"""
             <div style="background-color: #f0f8ff; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
                 <p style="margin: 0; font-weight: bold;">Analysis tailored for:</p>
                 <p style="margin: 0;"><strong>Business Type:</strong> {business_display}</p>
                 <p style="margin: 0;"><strong>Page Type:</strong> {page_display}</p>
+                <p style="margin: 5px 0;"><strong>Target Keywords:</strong> {keywords_display}</p>
             </div>
             """, unsafe_allow_html=True)
 
