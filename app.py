@@ -1094,6 +1094,14 @@ def fetch_content_from_url(url):
 # Main content area
 def main():
     st.title("SEO Embedding Analysis Tool")
+    
+    # Add this debug/clear button
+    if st.button("🗑️ Clear All Data", help="Clear previous analysis and start fresh"):
+        for key in ['embedding', 'analysis', 'claude_analysis', 'analysis_completed', 'seo_metadata', 'heading_structure']:
+            if key in st.session_state:
+                st.session_state[key] = None
+        st.session_state.analysis_completed = False
+        st.rerun()
 
     # Content input options
     st.header("Content Input")
@@ -1161,7 +1169,7 @@ def main():
     # --- Analysis Trigger Logic ---
     # Determine if analysis should be triggered
     # Trigger analysis if either the paste button is clicked and content is available,
-    # OR if the fetch button was clicked in the previous run and content is now successfully loaded in session state.
+    # OR if the fetch button was clicked in the previous run and content is now successfully loaded in session_state.
     trigger_analysis = False
 
     # Case 1: Paste Content and Analyze button clicked
@@ -1482,102 +1490,92 @@ def main():
             # Show content categorization info
             business_display = {
                 "lead_generation": "Lead Generation/Service",
-                "ecommerce": "E-commerce",
+                "ecommerce": "E-commerce", 
                 "saas": "SaaS/Tech",
                 "educational": "Educational/Informational",
                 "local_business": "Local Business"
             }.get(st.session_state.business_type, st.session_state.business_type.replace("_", " ").title())
 
             page_display = st.session_state.page_type.replace("_", " ").title()
-# Show analysis configuration including keywords
-business_display = {
-    "lead_generation": "Lead Generation/Service",
-    "ecommerce": "E-commerce",
-    "saas": "SaaS/Tech",
-    "educational": "Educational/Informational",
-    "local_business": "Local Business"
-}.get(st.session_state.business_type, st.session_state.business_type.replace("_", " ").title())
+            keywords_display = st.session_state.target_keyword if st.session_state.target_keyword else "No target keywords specified"
 
-page_display = st.session_state.page_type.replace("_", " ").title()
-keywords_display = st.session_state.target_keyword if st.session_state.target_keyword else "No target keywords specified"
+            st.markdown(f"""
+            <div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #1f77b4;">
+                <p style="margin: 0; font-weight: bold; font-size: 16px;">📊 Analysis Configuration:</p>
+                <p style="margin: 5px 0;"><strong>Business Type:</strong> {business_display}</p>
+                <p style="margin: 5px 0;"><strong>Page Type:</strong> {page_display}</p>
+                <p style="margin: 5px 0;"><strong>Target Keywords:</strong> {keywords_display}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-st.markdown(f"""
-<div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #1f77b4;">
-    <p style="margin: 0; font-weight: bold; font-size: 16px;">📊 Analysis Configuration:</p>
-    <p style="margin: 5px 0;"><strong>Business Type:</strong> {business_display}</p>
-    <p style="margin: 5px 0;"><strong>Page Type:</strong> {page_display}</p>
-    <p style="margin: 5px 0;"><strong>Target Keywords:</strong> {keywords_display}</p>
-</div>
-""", unsafe_allow_html=True)
-
-st.subheader("Comprehensive Embedding Analysis Report")
+            st.subheader("Comprehensive Embedding Analysis Report")
 
             # Display the analysis content
-st.markdown(st.session_state.claude_analysis, unsafe_allow_html=True)
+            st.markdown(st.session_state.claude_analysis, unsafe_allow_html=True)
 
             # Download options
-st.write("---")
+            st.write("---")
 
-with st.container():
-    st.markdown("""
-    <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px;">
-    <h3 style="margin-top: 0;">Download Options</h3>
-    </div>
-    """, unsafe_allow_html=True)
+            with st.container():
+                st.markdown("""
+                <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px;">
+                <h3 style="margin-top: 0;">Download Options</h3>
+                </div>
+                """, unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
+                col1, col2 = st.columns(2)
 
-    # Text download button
-    with col1:
-        download_text = ""
-        if st.session_state.claude_analysis:
-            if isinstance(st.session_state.claude_analysis, str):
-                download_text = st.session_state.claude_analysis
-            else:
-                download_text = str(st.session_state.claude_analysis)
-        else:
-            download_text = "No analysis available for download."
+                # Text download button
+                with col1:
+                    download_text = ""
+                    if st.session_state.claude_analysis:
+                        if isinstance(st.session_state.claude_analysis, str):
+                            download_text = st.session_state.claude_analysis
+                        else:
+                            download_text = str(st.session_state.claude_analysis)
+                    else:
+                        download_text = "No analysis available for download."
 
-        st.download_button(
-            label="Download as Text",
-            data=download_text.encode("utf-8"),
-            file_name="seo_embedding_analysis_report.txt",
-            mime="text/plain",
-            help="Download the analysis as a plain text file",
-            key="download_text_button"
-        )
+                    st.download_button(
+                        label="Download as Text",
+                        data=download_text.encode("utf-8"),
+                        file_name="seo_embedding_analysis_report.txt",
+                        mime="text/plain",
+                        help="Download the analysis as a plain text file",
+                        key="download_text_button"
+                    )
 
-    # PDF generation button and download
-    with col2:
-        if st.session_state.pdf_data is None:
-            if st.button("Generate PDF Report", help="Create a PDF with visualizations and analysis", key="generate_pdf_button_tab"):
-                with st.spinner("Generating PDF report... This may take up to a minute."):
-                    try:
-                        pdf_bytes = create_report_pdf(
-                            st.session_state.embedding,
-                            st.session_state.analysis,
-                            st.session_state.claude_analysis,
-                            st.session_state.business_type,
-                            st.session_state.page_type
-                        )
-                        st.session_state.pdf_data = pdf_bytes
-                        st.session_state.pdf_generated = True
-                        st.success("PDF report generated successfully!")
-                        # Trigger a rerun to show the download button immediately
-                        raise RerunException(RerunData())
-                    except Exception as e:
-                        st.error(f"Error generating PDF: {str(e)}")
-        else:
-            # Show PDF download button if PDF has been generated
-            b64_pdf = base64.b64encode(st.session_state.pdf_data).decode('utf-8')
-            download_link = f'<a href="data:application/pdf;base64,{b64_pdf}" download="seo_embedding_analysis_report.pdf" class="button" style="display: inline-block; padding: 12px 20px; background-color: #0c6b58; color: white; text-decoration: none; font-weight: bold; border-radius: 4px; text-align: center; margin: 10px 0; width: 100%;">DOWNLOAD COMPLETE PDF REPORT</a>'
-            st.markdown(download_link, unsafe_allow_html=True)
+                # PDF generation button and download
+                with col2:
+                    if st.session_state.pdf_data is None:
+                        if st.button("Generate PDF Report", help="Create a PDF with visualizations and analysis", key="generate_pdf_button_tab"):
+                            with st.spinner("Generating PDF report... This may take up to a minute."):
+                                try:
+                                    pdf_bytes = create_report_pdf(
+                                        st.session_state.embedding,
+                                        st.session_state.analysis,
+                                        st.session_state.claude_analysis,
+                                        st.session_state.business_type,
+                                        st.session_state.page_type
+                                    )
+                                    st.session_state.pdf_data = pdf_bytes
+                                    st.session_state.pdf_generated = True
+                                    st.success("PDF report generated successfully!")
+                                    # Trigger a rerun to show the download button immediately
+                                    raise RerunException(RerunData())
+                                except Exception as e:
+                                    st.error(f"Error generating PDF: {str(e)}")
+                    else:
+                        # Show PDF download button if PDF has been generated
+                        b64_pdf = base64.b64encode(st.session_state.pdf_data).decode('utf-8')
+                        download_link = f'<a href="data:application/pdf;base64,{b64_pdf}" download="seo_embedding_analysis_report.pdf" class="button" style="display: inline-block; padding: 12px 20px; background-color: #0c6b58; color: white; text-decoration: none; font-weight: bold; border-radius: 4px; text-align: center; margin: 10px 0; width: 100%;">DOWNLOAD COMPLETE PDF REPORT</a>'
+                        st.markdown(download_link, unsafe_allow_html=True)
 
-            if st.button("Discard PDF and Generate Again", key="discard_pdf_button_tab"):
-                st.session_state.pdf_data = None
-                st.session_state.pdf_generated = False
-                # Trigger a rerun to update the button state
-                raise RerunException(RerunData())
+                        if st.button("Discard PDF and Generate Again", key="discard_pdf_button_tab"):
+                            st.session_state.pdf_data = None
+                            st.session_state.pdf_generated = False
+                            # Trigger a rerun to update the button state
+                            raise RerunException(RerunData())
 
 if __name__ == "__main__":
     try:
