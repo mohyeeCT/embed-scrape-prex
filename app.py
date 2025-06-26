@@ -78,7 +78,10 @@ if 'url' not in st.session_state:
     st.session_state.url = ""
 if 'fetch_button_clicked' not in st.session_state:
     st.session_state.fetch_button_clicked = False
-
+if 'seo_metadata' not in st.session_state:
+    st.session_state.seo_metadata = None
+if 'heading_structure' not in st.session_state:
+    st.session_state.heading_structure = None
 # Sidebar for API keys and settings
 with st.sidebar:
     st.title("API Settings")
@@ -157,7 +160,7 @@ def get_current_settings():
     }
 
 def analyze_with_claude(embedding_data, content_snippet, business_type, page_type):
-    """Get analysis from Claude with business and page type context"""
+    """Get analysis from Claude with business, page type context, and SEO metadata"""
     try:
         # Get current settings at the time of function call
         current_settings = get_current_settings()
@@ -205,6 +208,27 @@ def analyze_with_claude(embedding_data, content_snippet, business_type, page_typ
         else:
             page_context = f"a {page_type.replace('_', ' ')}"
 
+        # Extract SEO metadata if available
+        seo_info = ""
+        if hasattr(st.session_state, 'seo_metadata') and st.session_state.seo_metadata:
+            metadata = st.session_state.seo_metadata
+            headings = st.session_state.heading_structure if hasattr(st.session_state, 'heading_structure') else {}
+            
+            seo_info = f"""
+SEO METADATA ANALYSIS:
+- Title: {metadata.get('title', 'N/A')}
+- Meta Description: {metadata.get('meta_description', 'N/A')}
+- Meta Keywords: {metadata.get('meta_keywords', 'N/A')}
+- Canonical URL: {metadata.get('canonical_url', 'N/A')}
+- OG Title: {metadata.get('og_title', 'N/A')}
+- OG Description: {metadata.get('og_description', 'N/A')}
+
+HEADING STRUCTURE:
+- H1 Tags ({len(headings.get('h1', []))}): {', '.join(headings.get('h1', [])) if headings.get('h1') else 'None found'}
+- H2 Tags ({len(headings.get('h2', []))}): {', '.join(headings.get('h2', [])) if headings.get('h2') else 'None found'}
+- H3 Tags ({len(headings.get('h3', []))}): {', '.join(headings.get('h3', [])) if headings.get('h3') else 'None found'}
+"""
+
         message = anthropic_client.messages.create(
             model=current_settings["model"],
             max_tokens=current_settings["max_tokens"],
@@ -219,6 +243,14 @@ Your mission is to provide a comprehensive, multi-dimensional analysis of embedd
 
 IMPORTANT CONTEXT: The content being analyzed is for {business_context}. Specifically, it is {page_context}. Tailor all your analysis and recommendations to this specific business and page type.
 
+## SEO METADATA INTEGRATION
+When SEO metadata is provided, you must analyze:
+1. **Title Tag Optimization**: Length, keyword placement, clarity, and brand alignment
+2. **Meta Description Quality**: Length (150-160 chars), compelling copy, call-to-action presence
+3. **Heading Hierarchy**: Proper H1 usage (should be one primary H1), logical H2/H3 structure
+4. **Content-Metadata Alignment**: How well the embedding patterns match the SEO metadata promises
+5. **Missing SEO Elements**: Identify gaps in meta keywords, canonical URLs, Open Graph data
+
 ## ANALYTICAL METHODOLOGY
 To ensure consistent analysis across different content types:
 
@@ -229,18 +261,18 @@ To ensure consistent analysis across different content types:
    - Never assign predetermined meanings to specific dimension ranges
    - Base all interpretations only on patterns present in the current embedding
 
-2. **Statistical Consistency**:
+2. **SEO-Embedding Correlation Analysis**:
+   - Correlate high-activation semantic dimensions with SEO metadata keywords
+   - Identify semantic gaps between stated page purpose (title/meta) and content embedding
+   - Analyze heading structure coherence with content themes in embedding
+   - Flag inconsistencies between SEO promises and semantic content delivery
+
+3. **Statistical Consistency**:
    - Always flag dimensions with magnitude >0.1 as significant
    - Consider clusters of 3+ adjacent dimensions with similar activations as coherent topics
    - Identify semantic gaps as dimension ranges with consistently low activation (<0.01)
    - Use standard deviation as a consistent measure of semantic density
    - Always provide specific dimension numbers when referencing activation patterns
-
-3. **Analysis Structure**:
-   - Always analyze in exactly this order: coherence, topic identification, semantic density, gaps
-   - Use consistent scoring methodology (7/10 means the same thing across analyses)
-   - For each identified pattern, explain what it likely means for the specific content
-   - Include both strengths and weaknesses in every analysis section
 
 ## CONTEXTUAL EXPLANATION
 Begin with a brief explanation of embedding dimensions and metrics for the user:
@@ -250,43 +282,38 @@ Begin with a brief explanation of embedding dimensions and metrics for the user:
 - Clarify that dimensions capture different aspects of meaning, topic relevance, and content quality
 - Note that strong activations (high positive or negative values) indicate important semantic features
 - Explain that clusters of activated dimensions often represent coherent topics or themes
-- Give concrete examples relating dimensions to content concepts (e.g., "Dimensions 1000-1100 often capture industry-specific terminology")
+- Give concrete examples relating dimensions to content concepts
 
-**Metrics Interpretation Guide:**
-- Explain how mean values indicate overall semantic balance
-- Describe how standard deviation reflects semantic diversity
-- Clarify that top activation dimensions represent the most prominent content themes
-- Explain how dimension clusters relate to topic coherence
-- Note how dimensional patterns reflect content quality and optimization potential
-
-**Visualization Metrics Interpretation:**
-- **Embedding Overview Graph**: Explain that this shows the value of each dimension across the entire embedding, with spikes indicating important semantic features
-- **Top Dimensions Chart**: Clarify that these bars represent the most influential dimensions, with height indicating importance and color (blue/red) showing positive/negative orientation
-- **Activation Distribution Histogram**: Explain this shows the frequency of different activation values, with the bell curve shape indicating content balance
-- **Dimension Clusters Heatmap**: Describe how color intensity reveals semantic concentration areas, with bright spots indicating topical focus
-- **PCA Visualization**: Explain how this reduces complexity to show relationships between dimension groups, with proximity indicating semantic similarity
+**SEO Metadata Integration:**
+- Explain how SEO metadata (title, description, headings) should align with embedding patterns
+- Describe how misalignment indicates optimization opportunities
+- Note how heading structure should reflect in dimensional clustering patterns
 
 ## ANALYSIS STRUCTURE
 Your output must follow this structure precisely with FOUR distinct sections:
 
 1. **Contextual Explanation**
-   - Provide explanation of embedding dimensions and metrics
+   - Provide explanation of embedding dimensions, metrics, and SEO metadata integration
    - Use accessible language while maintaining technical accuracy
    - Connect abstract concepts to practical content implications
 
 2. **Embedding Analysis**
    - Provide detailed technical analysis of the embedding patterns and their meanings
+   - **SEO Metadata Analysis**: Dedicated subsection analyzing title, meta description, headings, and their alignment with content
+   - **Content-SEO Alignment**: How well the semantic content matches SEO promises
    - Organize in clearly labeled sections
    - Include quantitative metrics and specific dimension references
 
-2. **Actionable Recommendations**
-   - Provide specific, implementable suggestions tailored to the business type ({st.session_state.business_type}) and page type ({st.session_state.page_type})
-   - Separate completely from analysis
+3. **Actionable Recommendations**
+   - Provide specific, implementable suggestions tailored to the business type and page type
+   - **SEO-Specific Recommendations**: Title optimization, meta description improvements, heading restructuring
+   - **Content-SEO Alignment Fixes**: How to better align content with SEO metadata
    - Include examples of how to implement each recommendation
-   - Focus on recommendations that would be most effective for {business_context} and specifically for {page_context}
+   - Focus on recommendations that would be most effective for this business and page type
 
-3. **Summary**
+4. **Summary**
    - Summarize key findings and recommendations in non-technical language
+   - Include both content and SEO optimization priorities
    - Format as bullet points
    - Ensure it's understandable by someone with no technical background
 
@@ -304,11 +331,13 @@ For {page_context}:
             messages=[
                 {
                     "role": "user",
-                    "content": f"""Comprehensive Embedding Analysis Request:
+                    "content": f"""Comprehensive Embedding Analysis Request with SEO Metadata:
 
 CONTENT CONTEXT:
 - First 4500 characters of content:
 {content_snippet[:4500]}
+
+{seo_info}
 
 EMBEDDING DATA DIAGNOSTICS:
 - Total Dimensions: {len(embedding_data)}
@@ -325,11 +354,11 @@ BUSINESS TYPE: {business_type}
 PAGE TYPE: {page_type}
 
 Please provide a comprehensive analysis following the exact format in your instructions:
-1. First, deliver a detailed EMBEDDING ANALYSIS with clear sections and quantitative metrics
-2. Then, provide completely separate ACTIONABLE RECOMMENDATIONS with implementation examples specifically tailored for this business type and page type
-3. Finally, include a PLAIN LANGUAGE SUMMARY in simple bullet points
+1. First, deliver a detailed EMBEDDING ANALYSIS with clear sections including SEO metadata analysis and content-SEO alignment
+2. Then, provide completely separate ACTIONABLE RECOMMENDATIONS with implementation examples specifically tailored for this business type and page type, including SEO-specific recommendations
+3. Finally, include a PLAIN LANGUAGE SUMMARY in simple bullet points covering both content and SEO priorities
 
-Ensure your analysis transforms embedding data into strategic, implementable content optimization insights."""
+Ensure your analysis transforms embedding data into strategic, implementable content and SEO optimization insights."""
                 }
             ]
         )
@@ -834,7 +863,7 @@ def create_report_pdf(embedding, analysis, claude_analysis, business_type, page_
         return None
 
 def fetch_content_from_url(url):
-    """Fetches and parses content from a given URL."""
+    """Fetches and parses content from a given URL with comprehensive SEO metadata extraction."""
     try:
         # Add headers to mimic a real browser request
         headers = {
@@ -863,6 +892,65 @@ def fetch_content_from_url(url):
         for script in soup(["script", "style"]):
             script.decompose()
         
+        # === SEO METADATA EXTRACTION ===
+        seo_metadata = {}
+        
+        # Extract Title
+        title_tag = soup.find('title')
+        seo_metadata['title'] = title_tag.get_text(strip=True) if title_tag else "No title found"
+        
+        # Extract Meta Description
+        meta_desc = soup.find('meta', attrs={'name': 'description'})
+        if not meta_desc:
+            meta_desc = soup.find('meta', attrs={'property': 'og:description'})
+        seo_metadata['meta_description'] = meta_desc.get('content', '').strip() if meta_desc else "No meta description found"
+        
+        # Extract Meta Keywords (if present)
+        meta_keywords = soup.find('meta', attrs={'name': 'keywords'})
+        seo_metadata['meta_keywords'] = meta_keywords.get('content', '').strip() if meta_keywords else "No meta keywords found"
+        
+        # Extract Open Graph data
+        og_title = soup.find('meta', attrs={'property': 'og:title'})
+        og_description = soup.find('meta', attrs={'property': 'og:description'})
+        og_image = soup.find('meta', attrs={'property': 'og:image'})
+        
+        seo_metadata['og_title'] = og_title.get('content', '').strip() if og_title else "No OG title found"
+        seo_metadata['og_description'] = og_description.get('content', '').strip() if og_description else "No OG description found"
+        seo_metadata['og_image'] = og_image.get('content', '').strip() if og_image else "No OG image found"
+        
+        # Extract Canonical URL
+        canonical = soup.find('link', attrs={'rel': 'canonical'})
+        seo_metadata['canonical_url'] = canonical.get('href', '').strip() if canonical else "No canonical URL found"
+        
+        # Extract Heading Structure
+        headings = {
+            'h1': [],
+            'h2': [],
+            'h3': []
+        }
+        
+        # Extract H1 tags
+        h1_tags = soup.find_all('h1')
+        for h1 in h1_tags:
+            h1_text = h1.get_text(strip=True)
+            if h1_text:  # Only add non-empty headings
+                headings['h1'].append(h1_text)
+        
+        # Extract H2 tags
+        h2_tags = soup.find_all('h2')
+        for h2 in h2_tags:
+            h2_text = h2.get_text(strip=True)
+            if h2_text:
+                headings['h2'].append(h2_text)
+        
+        # Extract H3 tags
+        h3_tags = soup.find_all('h3')
+        for h3 in h3_tags:
+            h3_text = h3.get_text(strip=True)
+            if h3_text:
+                headings['h3'].append(h3_text)
+        
+        # === MAIN CONTENT EXTRACTION ===
         # Try multiple content extraction strategies
         main_content = None
         
@@ -901,18 +989,56 @@ def fetch_content_from_url(url):
         if len(text) < 100:
             st.warning(f"Warning: Only extracted {len(text)} characters. The page might be JavaScript-heavy or protected.")
         
-        # Add metadata
-        title = soup.find('title')
-        description = soup.find('meta', attrs={'name': 'description'})
-        
+        # === BUILD FORMATTED OUTPUT ===
         extracted_info = ""
-        if title:
-            extracted_info += f"Title: {title.get_text(strip=True)}\n\n"
-        if description:
-            extracted_info += f"Description: {description.get('content', '').strip()}\n\n"
         
-        extracted_info += "--- Page Content ---\n\n"
+        # SEO Metadata Section
+        extracted_info += "=== SEO METADATA ===\n\n"
+        
+        extracted_info += f"Title: {seo_metadata['title']}\n"
+        extracted_info += f"Meta Description: {seo_metadata['meta_description']}\n"
+        extracted_info += f"Meta Keywords: {seo_metadata['meta_keywords']}\n"
+        extracted_info += f"Canonical URL: {seo_metadata['canonical_url']}\n\n"
+        
+        extracted_info += "Open Graph Data:\n"
+        extracted_info += f"  OG Title: {seo_metadata['og_title']}\n"
+        extracted_info += f"  OG Description: {seo_metadata['og_description']}\n"
+        extracted_info += f"  OG Image: {seo_metadata['og_image']}\n\n"
+        
+        # Heading Structure Section
+        extracted_info += "=== HEADING STRUCTURE ===\n\n"
+        
+        if headings['h1']:
+            extracted_info += f"H1 Tags ({len(headings['h1'])}):\n"
+            for i, h1 in enumerate(headings['h1'], 1):
+                extracted_info += f"  {i}. {h1}\n"
+            extracted_info += "\n"
+        else:
+            extracted_info += "H1 Tags: None found\n\n"
+        
+        if headings['h2']:
+            extracted_info += f"H2 Tags ({len(headings['h2'])}):\n"
+            for i, h2 in enumerate(headings['h2'], 1):
+                extracted_info += f"  {i}. {h2}\n"
+            extracted_info += "\n"
+        else:
+            extracted_info += "H2 Tags: None found\n\n"
+        
+        if headings['h3']:
+            extracted_info += f"H3 Tags ({len(headings['h3'])}):\n"
+            for i, h3 in enumerate(headings['h3'], 1):
+                extracted_info += f"  {i}. {h3}\n"
+            extracted_info += "\n"
+        else:
+            extracted_info += "H3 Tags: None found\n\n"
+        
+        # Page Content Section
+        extracted_info += "=== PAGE CONTENT ===\n\n"
         extracted_info += text
+        
+        # Store metadata in session state for use in analysis
+        st.session_state.seo_metadata = seo_metadata
+        st.session_state.heading_structure = headings
         
         return extracted_info
         
@@ -1134,10 +1260,80 @@ def main():
     # Check for both embedding and claude_analysis to ensure analysis is complete and not an error message
     if st.session_state.embedding is not None and st.session_state.claude_analysis is not None and "Error getting analysis" not in st.session_state.claude_analysis:
         # Create tabs for different sections
-        tab1, tab2, tab3, tab4 = st.tabs(["Visualizations", "Metrics", "Clusters", "Analysis Report"])
-
-        # Tab 1: Visualizations
-        with tab1:
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["SEO Metadata", "Visualizations", "Metrics", "Clusters", "Analysis Report"])
+# Tab 1: SEO Metadata
+    with tab1:
+        if hasattr(st.session_state, 'seo_metadata') and st.session_state.seo_metadata:
+            st.subheader("SEO Metadata Analysis")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**Title Tag:**")
+                title_length = len(st.session_state.seo_metadata['title'])
+                title_color = "🟢" if 30 <= title_length <= 60 else "🟡" if title_length <= 70 else "🔴"
+                st.info(f"{title_color} {st.session_state.seo_metadata['title']} ({title_length} chars)")
+                
+                st.write("**Meta Description:**")
+                desc_length = len(st.session_state.seo_metadata['meta_description'])
+                desc_color = "🟢" if 120 <= desc_length <= 160 else "🟡" if desc_length <= 180 else "🔴"
+                st.info(f"{desc_color} {st.session_state.seo_metadata['meta_description']} ({desc_length} chars)")
+                
+                st.write("**Meta Keywords:**")
+                st.info(st.session_state.seo_metadata['meta_keywords'])
+            
+            with col2:
+                st.write("**Canonical URL:**")
+                st.info(st.session_state.seo_metadata['canonical_url'])
+                
+                st.write("**OG Title:**")
+                st.info(st.session_state.seo_metadata['og_title'])
+                
+                st.write("**OG Description:**")
+                st.info(st.session_state.seo_metadata['og_description'])
+            
+            # Heading structure
+            st.subheader("Heading Structure")
+            if hasattr(st.session_state, 'heading_structure'):
+                headings = st.session_state.heading_structure
+                
+                h1_count = len(headings.get('h1', []))
+                h1_color = "🟢" if h1_count == 1 else "🟡" if h1_count == 0 else "🔴"
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.write(f"**H1 Tags ({h1_color} {h1_count}):**")
+                    if headings.get('h1'):
+                        for i, heading in enumerate(headings['h1'], 1):
+                            st.write(f"{i}. {heading}")
+                    else:
+                        st.write("❌ No H1 tags found")
+                
+                with col2:
+                    st.write(f"**H2 Tags ({len(headings.get('h2', []))}):**")
+                    if headings.get('h2'):
+                        for i, heading in enumerate(headings['h2'][:5], 1):
+                            st.write(f"{i}. {heading}")
+                        if len(headings['h2']) > 5:
+                            st.write(f"... and {len(headings['h2']) - 5} more")
+                    else:
+                        st.write("No H2 tags found")
+                
+                with col3:
+                    st.write(f"**H3 Tags ({len(headings.get('h3', []))}):**")
+                    if headings.get('h3'):
+                        for i, heading in enumerate(headings['h3'][:5], 1):
+                            st.write(f"{i}. {heading}")
+                        if len(headings['h3']) > 5:
+                            st.write(f"... and {len(headings['h3']) - 5} more")
+                    else:
+                        st.write("No H3 tags found")
+        else:
+            st.info("SEO metadata will appear here when you analyze a URL. For pasted content, this tab won't show data.")
+            
+        # Tab 2: Visualizations
+        with tab2:
             st.subheader("Embedding Overview")
             fig1 = plot_embedding_overview(st.session_state.embedding)
             st.pyplot(fig1)
@@ -1169,8 +1365,8 @@ def main():
                 st.pyplot(fig5)
                 plt.close(fig5)  # Release memory
 
-        # Tab 2: Metrics
-        with tab2:
+        # Tab 3: Metrics
+        with tab3:
             st.subheader("Key Metrics")
             metrics = st.session_state.analysis["metrics"]
 
@@ -1192,8 +1388,8 @@ def main():
                 st.metric("Negative Values", f"{metrics['negative_count']} ({metrics['negative_count']/metrics['dimension_count']*100:.2f}%)")
                 st.metric("Significant Dimensions", f"{metrics['significant_dims']} (>0.1)")
 
-        # Tab 3: Clusters
-        with tab3:
+        # Tab 4: Clusters
+        with tab4:
             st.subheader("Dimension Clusters")
 
             if not st.session_state.analysis["clusters"]:
@@ -1206,8 +1402,8 @@ def main():
                         col2.metric("Avg Value", f"{cluster['avg_value']:.6f}")
                         col3.metric("Max Value", f"{cluster['max_value']:.6f} (dim {cluster['max_dim']})")
 
-        # Tab 4: Claude Analysis with improved PDF generation and download
-        with tab4:
+        # Tab 5: Claude Analysis with improved PDF generation and download
+        with tab5:
             # Show content categorization info
             business_display = {
                 "lead_generation": "Lead Generation/Service",
