@@ -220,8 +220,8 @@ def analyze_with_claude(embedding_data, content_snippet, business_type, page_typ
                 else:
                     primary_keyword = keywords_list[0]
                     secondary_keywords = keywords_list[1:]
-                    keyword_context = f"The PRIMARY TARGET KEYWORD is: '{primary_keyword}'\nSECONDARY TARGET KEYWORDS are: {', '.join([f\"'{kw}'\" for kw in secondary_keywords])}"
-
+                    secondary_keywords_formatted = ', '.join([f"'{kw}'" for kw in secondary_keywords])
+                    keyword_context = f"The PRIMARY TARGET KEYWORD is: '{primary_keyword}'\nSECONDARY TARGET KEYWORDS are: {secondary_keywords_formatted}"
         # Extract SEO metadata if available
         seo_info = ""
         if hasattr(st.session_state, 'seo_metadata') and st.session_state.seo_metadata:
