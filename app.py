@@ -1514,23 +1514,24 @@ with st.container():
 
                 # Text download button
                 with col1:
-download_text = ""
-if st.session_state.claude_analysis:
-    if isinstance(st.session_state.claude_analysis, str):
-        download_text = st.session_state.claude_analysis
+with st.container():
+    download_text = ""
+    if st.session_state.claude_analysis:
+        if isinstance(st.session_state.claude_analysis, str):
+            download_text = st.session_state.claude_analysis
+        else:
+            download_text = str(st.session_state.claude_analysis)
     else:
-        download_text = str(st.session_state.claude_analysis)
-else:
-    download_text = "No analysis available for download."
+        download_text = "No analysis available for download."
 
-st.download_button(
-    label="Download as Text",
-    data=download_text,
-    file_name="seo_embedding_analysis_report.txt",
-    mime="text/plain",
-    help="Download the analysis as a plain text file",
-    key="download_text_button"
-)
+    st.download_button(
+        label="Download as Text",
+        data=download_text,
+        file_name="seo_embedding_analysis_report.txt",
+        mime="text/plain",
+        help="Download the analysis as a plain text file",
+        key="download_text_button"
+    )
 
                 # PDF generation button and download
                 with col2:
