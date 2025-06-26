@@ -1485,13 +1485,13 @@ st.markdown(f"""
             </div>
             """, unsafe_allow_html=True)
 
-            st.subheader("Comprehensive Embedding Analysis Report")
+st.subheader("Comprehensive Embedding Analysis Report")
 
             # Display the analysis content
-            st.markdown(st.session_state.claude_analysis, unsafe_allow_html=True)
+st.markdown(st.session_state.claude_analysis, unsafe_allow_html=True)
 
             # Download options
-            st.write("---")
+st.write("---")
 
             with st.container():
                 st.markdown("""
