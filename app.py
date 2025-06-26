@@ -1476,7 +1476,7 @@ def main():
             page_display = st.session_state.page_type.replace("_", " ").title()
 # Show analysis configuration including keywords
 keywords_display = st.session_state.target_keyword if st.session_state.target_keyword else "No target keywords specified"
-            st.markdown(f"""
+st.markdown(f"""
             <div style="background-color: #f0f8ff; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
                 <p style="margin: 0; font-weight: bold;">Analysis tailored for:</p>
                 <p style="margin: 0;"><strong>Business Type:</strong> {business_display}</p>
