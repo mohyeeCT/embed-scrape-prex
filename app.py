@@ -1475,15 +1475,25 @@ def main():
 
             page_display = st.session_state.page_type.replace("_", " ").title()
 # Show analysis configuration including keywords
+business_display = {
+    "lead_generation": "Lead Generation/Service",
+    "ecommerce": "E-commerce",
+    "saas": "SaaS/Tech",
+    "educational": "Educational/Informational",
+    "local_business": "Local Business"
+}.get(st.session_state.business_type, st.session_state.business_type.replace("_", " ").title())
+
+page_display = st.session_state.page_type.replace("_", " ").title()
 keywords_display = st.session_state.target_keyword if st.session_state.target_keyword else "No target keywords specified"
+
 st.markdown(f"""
-            <div style="background-color: #f0f8ff; padding: 10px; border-radius: 5px; margin-bottom: 20px;">
-                <p style="margin: 0; font-weight: bold;">Analysis tailored for:</p>
-                <p style="margin: 0;"><strong>Business Type:</strong> {business_display}</p>
-                <p style="margin: 0;"><strong>Page Type:</strong> {page_display}</p>
-                <p style="margin: 5px 0;"><strong>Target Keywords:</strong> {keywords_display}</p>
-            </div>
-            """, unsafe_allow_html=True)
+<div style="background-color: #f0f8ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #1f77b4;">
+    <p style="margin: 0; font-weight: bold; font-size: 16px;">📊 Analysis Configuration:</p>
+    <p style="margin: 5px 0;"><strong>Business Type:</strong> {business_display}</p>
+    <p style="margin: 5px 0;"><strong>Page Type:</strong> {page_display}</p>
+    <p style="margin: 5px 0;"><strong>Target Keywords:</strong> {keywords_display}</p>
+</div>
+""", unsafe_allow_html=True)
 
 st.subheader("Comprehensive Embedding Analysis Report")
 
