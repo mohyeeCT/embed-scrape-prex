@@ -1271,7 +1271,7 @@ def main():
             else:
                 st.caption(f"✅ Primary keyword: '{keywords_list[0]}'")
         else:
-            st.caption("💡 Add keywords for better SEO analysis")
+            st.caption("Add keywords for better SEO analysis")
 
     # Show a summary box with all selections
     if target_keyword:
