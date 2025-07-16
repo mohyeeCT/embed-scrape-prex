@@ -106,9 +106,18 @@ with st.sidebar:
     st.subheader("Model Settings")
     claude_model = st.selectbox(
         "Claude Model",
-        ["claude-3-7-sonnet-latest", "claude-3-opus-20240229", "claude-3-5-sonnet-20240620"],
-        index=0 if st.session_state.claude_model == "claude-3-7-sonnet-latest" else
-              1 if st.session_state.claude_model == "claude-3-opus-20240229" else 2
+        [
+            "claude-3-7-sonnet-latest",
+            "claude-3-opus-20240229",
+            "claude-3-5-sonnet-20240620",
+            "claude-sonnet-4-20250514"
+        ],
+        index=(
+            0 if st.session_state.claude_model == "claude-3-7-sonnet-latest" else
+            1 if st.session_state.claude_model == "claude-3-opus-20240229" else
+            2 if st.session_state.claude_model == "claude-3-5-sonnet-20240620" else
+            3 if st.session_state.claude_model == "claude-sonnet-4-20250514" else 0
+        )
     )
     max_tokens = st.slider("Max Tokens", 4000, 15000, st.session_state.max_tokens, 1000)
     temperature = st.slider("Temperature", 0.0, 1.0, st.session_state.temperature, 0.1)
